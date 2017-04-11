@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(giskard)
 
 find_package(catkin REQUIRED COMPONENTS expressiongraph qpoases kdl_parser)
+find_package(Boost REQUIRED)
 
 # setting additional cmake flags, used for integration with Coveralls.io
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MY_CMAKE_CXX_FLAGS}")
@@ -14,7 +15,7 @@ find_library(yaml_cpp_LIBRARIES NAMES yaml-cpp)
 
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES ${PROJECT_NAME}
+  #LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS expressiongraph qpoases kdl_parser
   DEPENDS yaml_cpp
 )
@@ -34,6 +35,10 @@ include_directories(
 
 add_executable(extract_expression src/${PROJECT_NAME}/extract_expression.cpp)
 target_link_libraries(extract_expression
+  ${catkin_LIBRARIES} yaml-cpp)
+
+add_executable(test_giskard_parser src/${PROJECT_NAME}/test_parser.cpp)
+target_link_libraries(test_giskard_parser
   ${catkin_LIBRARIES} yaml-cpp)
 
 #############
