@@ -76,6 +76,9 @@ namespace giskard
         return it->second;
       }
 
+      template <typename T>
+      const typename KDL::Expression<T>::Ptr& find_expression(const std::string& reference_name) const;
+
       bool has_double_expression(const std::string& expression_name) const
       {
         return (double_references_.count(expression_name) == 1);
@@ -138,6 +141,26 @@ namespace giskard
       std::map< std::string, KDL::Expression<KDL::Rotation>::Ptr > rotation_references_;
       std::map< std::string, KDL::Expression<KDL::Frame>::Ptr > frame_references_;
   };
+
+  template <>
+  const typename KDL::Expression<double>::Ptr& Scope::find_expression<double>(const std::string& reference_name) const {
+    return find_double_expression(reference_name);
+  }
+
+  template <>
+  const typename KDL::Expression<KDL::Vector>::Ptr& Scope::find_expression<KDL::Vector>(const std::string& reference_name) const {
+    return find_vector_expression(reference_name);
+  }
+
+  template <>
+  const typename KDL::Expression<KDL::Rotation>::Ptr& Scope::find_expression<KDL::Rotation>(const std::string& reference_name) const {
+    return find_rotation_expression(reference_name);
+  }
+
+  template <>
+  const typename KDL::Expression<KDL::Frame>::Ptr& Scope::find_expression<KDL::Frame>(const std::string& reference_name) const {
+    return find_frame_expression(reference_name);
+  }
 }
 
 #endif // GISKARD_SCOPE_HPP

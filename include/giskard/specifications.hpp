@@ -24,6 +24,8 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include <unordered_map>
+#include <vector>
 #include <boost/lexical_cast.hpp>
 #include <giskard/expressiontree.hpp>
 #include <giskard/scope.hpp>
@@ -34,6 +36,7 @@ namespace giskard
   /// All primitive datatypes
   /// 
   enum gkDType {
+    tNONE,
     tScalar,
     tVec3,
     tRotation,
@@ -44,7 +47,28 @@ namespace giskard
     tSoftC,
     tContC,
     tString,
-    tNamedX
+    tNamedX,
+    tNamespace,
+    tStruct,
+
+    LAST
+  };
+
+  const std::string gkTypeNames[LAST] = {
+    "NONE",
+    "scalar",
+    "vec3",
+    "rotation",
+    "frame",
+    "list",
+    "map",
+    "hardC",
+    "softC",
+    "contC",
+    "string",
+    "named expression",
+    "namespace",
+    "object"
   };
 
   ///
@@ -77,8 +101,10 @@ namespace giskard
   class DoubleSpec : public Spec
   {
     public:
+      static const gkDType TYPE = tScalar;
+
       virtual bool equals(const Spec& other) const = 0;
-      inline gkDType type() const { return tScalar; }
+      inline gkDType type() const { return DoubleSpec::TYPE; }
 
       virtual KDL::Expression<double>::Ptr get_expression(const giskard::Scope& scope) = 0;
   };
@@ -88,8 +114,10 @@ namespace giskard
   class VectorSpec : public Spec
   {
     public:
+      static const gkDType TYPE = tVec3;
+
       virtual bool equals(const Spec& other) const = 0;
-      inline gkDType type() const { return tVec3; }
+      inline gkDType type() const { return VectorSpec::TYPE; }
 
       virtual KDL::Expression<KDL::Vector>::Ptr get_expression(const giskard::Scope& scope) = 0;
   };
@@ -99,8 +127,10 @@ namespace giskard
   class RotationSpec : public Spec
   {
     public:
+      static const gkDType TYPE = tRotation;
+
       virtual bool equals(const Spec& other) const = 0;
-      inline gkDType type() const { return tRotation; }
+      inline gkDType type() const { return RotationSpec::TYPE; }
 
       virtual KDL::Expression<KDL::Rotation>::Ptr get_expression(const giskard::Scope& scope) = 0;
   };
@@ -110,8 +140,10 @@ namespace giskard
   class FrameSpec : public Spec
   {
     public:
+      static const gkDType TYPE = tFrame;
+
       virtual bool equals(const Spec& other) const = 0;
-      inline gkDType type() const { return tFrame; }
+      inline gkDType type() const { return FrameSpec::TYPE; }
 
       virtual KDL::Expression<KDL::Frame>::Ptr get_expression(const giskard::Scope& scope) = 0;
   };
@@ -212,42 +244,48 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleInputSpec> DoubleInputSpecPtr;
 
-  class DoubleReferenceSpec : public DoubleSpec
+  inline DoubleInputSpecPtr double_input_spec(size_t input_num)
   {
-    public:
-      DoubleReferenceSpec() {}
-      DoubleReferenceSpec(std::string name)
-      : reference_name_(name)
-      {}
+    return DoubleInputSpecPtr(new DoubleInputSpec(input_num));
+  }
 
-      const std::string& get_reference_name() const
-      {
-        return reference_name_;
-      }
+  // class DoubleReferenceSpec : public DoubleSpec
+  // {
+  //   public:
+  //     DoubleReferenceSpec() {}
+  //     DoubleReferenceSpec(std::string name)
+  //     : reference_name_(name)
+  //     {}
 
-      void set_reference_name(const std::string& reference_name)
-      {
-        reference_name_ = reference_name;
-      }
+  //     const std::string& get_reference_name() const
+  //     {
+  //       return reference_name_;
+  //     }
 
-      virtual bool equals(const Spec& other) const
-      {
-        if(!dynamic_cast<const DoubleReferenceSpec*>(&other))
-          return false;
+  //     void set_reference_name(const std::string& reference_name)
+  //     {
+  //       reference_name_ = reference_name;
+  //     }
 
-        return (dynamic_cast<const DoubleReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
-      }
+  //     virtual bool equals(const Spec& other) const
+  //     {
+  //       if(!dynamic_cast<const DoubleReferenceSpec*>(&other))
+  //         return false;
 
-      virtual KDL::Expression<double>::Ptr get_expression(const giskard::Scope& scope)
-      {
-        return scope.find_double_expression(get_reference_name());
-      }
+  //       return (dynamic_cast<const DoubleReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
+  //     }
 
-    private:
-      std::string reference_name_;
-  };
+  //     virtual KDL::Expression<double>::Ptr get_expression(const giskard::Scope& scope)
+  //     {
+  //       return scope.find_double_expression(get_reference_name());
+  //     }
 
-  typedef typename boost::shared_ptr<DoubleReferenceSpec> DoubleReferenceSpecPtr;
+  //   private:
+  //     std::string reference_name_;
+  // };
+
+  // typedef typename boost::shared_ptr<DoubleReferenceSpec> DoubleReferenceSpecPtr;
+
 
   class DoubleAdditionSpec: public DoubleSpec
   {
@@ -256,11 +294,6 @@ namespace giskard
       DoubleAdditionSpec(const DoubleSpecPtr& lhs, const DoubleSpecPtr& rhs)
       {
         inputs_.push_back(lhs);
-        inputs_.push_back(rhs);
-      }
-      DoubleAdditionSpec(const boost::shared_ptr<DoubleAdditionSpec>& lhs, const DoubleSpecPtr& rhs)
-      : inputs_(lhs->inputs_)
-      {
         inputs_.push_back(rhs);
       }
 
@@ -319,6 +352,7 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleAdditionSpec> DoubleAdditionSpecPtr;
 
+
   class DoubleSubtractionSpec: public DoubleSpec
   {
     public:
@@ -326,11 +360,6 @@ namespace giskard
       DoubleSubtractionSpec(const DoubleSpecPtr& lhs, const DoubleSpecPtr& rhs)
       {
         inputs_.push_back(lhs);
-        inputs_.push_back(rhs);
-      }
-      DoubleSubtractionSpec(const boost::shared_ptr<DoubleSubtractionSpec>& lhs, const DoubleSpecPtr& rhs)
-      : inputs_(lhs->inputs_)
-      {
         inputs_.push_back(rhs);
       }
 
@@ -402,6 +431,7 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleSubtractionSpec> DoubleSubtractionSpecPtr;
 
+
   class DoubleNormOfSpec : public DoubleSpec
   {
     public:
@@ -439,6 +469,7 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleNormOfSpec> DoubleNormOfSpecPtr;
 
+
   class DoubleMultiplicationSpec: public DoubleSpec
   {
     public:
@@ -446,11 +477,6 @@ namespace giskard
       DoubleMultiplicationSpec(const DoubleSpecPtr& lhs, const DoubleSpecPtr& rhs)
       {
         inputs_.push_back(lhs);
-        inputs_.push_back(rhs);
-      }
-      DoubleMultiplicationSpec(const boost::shared_ptr<DoubleMultiplicationSpec>& lhs, const DoubleSpecPtr& rhs)
-      : inputs_(lhs->inputs_)
-      {
         inputs_.push_back(rhs);
       }
 
@@ -510,6 +536,7 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleMultiplicationSpec> DoubleMultiplicationSpecPtr;
 
+
   class DoubleDivisionSpec: public DoubleSpec
   {
     public:
@@ -517,11 +544,6 @@ namespace giskard
       DoubleDivisionSpec(const DoubleSpecPtr& lhs, const DoubleSpecPtr& rhs)
       {
         inputs_.push_back(lhs);
-        inputs_.push_back(rhs);
-      }
-      DoubleDivisionSpec(const boost::shared_ptr<DoubleDivisionSpec>& lhs, const DoubleSpecPtr& rhs)
-      : inputs_(lhs->inputs_)
-      {
         inputs_.push_back(rhs);
       }
 
@@ -593,11 +615,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleDivisionSpec> DoubleDivisionSpecPtr;
 
+
   class DoubleXCoordOfSpec : public DoubleSpec
   {
     public:
       DoubleXCoordOfSpec() {}
-      DoubleXCoordOfSpec(giskard::VectorSpecPtr& vec) 
+      DoubleXCoordOfSpec(const giskard::VectorSpecPtr& vec) 
       : vector_(vec)
       {}
 
@@ -630,11 +653,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleXCoordOfSpec> DoubleXCoordOfSpecPtr;
 
+
   class DoubleYCoordOfSpec : public DoubleSpec
   {
     public:
       DoubleYCoordOfSpec() {}
-      DoubleYCoordOfSpec(giskard::VectorSpecPtr& vec) 
+      DoubleYCoordOfSpec(const giskard::VectorSpecPtr& vec) 
       : vector_(vec)
       {}
 
@@ -667,11 +691,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleYCoordOfSpec> DoubleYCoordOfSpecPtr;
 
+
   class DoubleZCoordOfSpec : public DoubleSpec
   {
     public:
       DoubleZCoordOfSpec() {}
-      DoubleZCoordOfSpec(giskard::VectorSpecPtr& vec) 
+      DoubleZCoordOfSpec(const giskard::VectorSpecPtr& vec) 
       : vector_(vec)
       {}
 
@@ -704,11 +729,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleZCoordOfSpec> DoubleZCoordOfSpecPtr;
 
+
   class VectorDotSpec: public DoubleSpec
   {
     public:
       VectorDotSpec() {}
-      VectorDotSpec(VectorSpecPtr& a, VectorSpecPtr& b)
+      VectorDotSpec(const VectorSpecPtr& a, const VectorSpecPtr& b)
       : lhs_(a)
       , rhs_(b)
       {}   
@@ -757,11 +783,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<VectorDotSpec> VectorDotSpecPtr;
 
+
   class MinSpec: public DoubleSpec
   {
     public:
       MinSpec() {}
-      MinSpec(DoubleSpecPtr& a, DoubleSpecPtr& b)
+      MinSpec(const DoubleSpecPtr& a, const DoubleSpecPtr& b)
       : lhs_(a)
       , rhs_(b)
       {}
@@ -810,11 +837,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<MinSpec> MinSpecPtr;
 
+
   class MaxSpec: public DoubleSpec
   {
     public:
       MaxSpec() {}
-      MaxSpec(DoubleSpecPtr& a, DoubleSpecPtr& b)
+      MaxSpec(const DoubleSpecPtr& a, const DoubleSpecPtr& b)
       : lhs_(a)
       , rhs_(b)
       {}
@@ -863,11 +891,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<MaxSpec> MaxSpecPtr;
 
+
   class AbsSpec: public DoubleSpec
   {
     public:
       AbsSpec() {}
-      AbsSpec(DoubleSpecPtr& value)
+      AbsSpec(const DoubleSpecPtr& value)
       : value_(value)
       {}
 
@@ -903,11 +932,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<AbsSpec> AbsSpecPtr;
 
+
   class DoubleIfSpec: public DoubleSpec
   {
     public:
       DoubleIfSpec() {}
-      DoubleIfSpec(DoubleSpecPtr& condition, DoubleSpecPtr& then, DoubleSpecPtr& els)
+      DoubleIfSpec(const DoubleSpecPtr& condition, const DoubleSpecPtr& then, const DoubleSpecPtr& els)
       : condition_(condition)
       , if_(then)
       , else_(els)
@@ -968,11 +998,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<DoubleIfSpec> DoubleIfSpecPtr;
 
+
   class FmodSpec: public DoubleSpec
   {
     public:
       FmodSpec() {}
-      FmodSpec(DoubleSpecPtr& nominator, DoubleSpecPtr& denominator)
+      FmodSpec(const DoubleSpecPtr& nominator, const DoubleSpecPtr& denominator)
       : nominator_(nominator)
       , denominator_(denominator)
       {}
@@ -1032,11 +1063,12 @@ namespace giskard
 
   typedef typename boost::shared_ptr<FmodSpec> FmodSpecPtr;
 
-class SinSpec: public DoubleSpec
+
+  class SinSpec: public DoubleSpec
   {
     public:
       SinSpec() {}
-      SinSpec(DoubleSpecPtr& value) 
+      SinSpec(const DoubleSpecPtr& value) 
       : value_(value)
       {}
 
@@ -1072,11 +1104,12 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<SinSpec> SinSpecPtr;
 
+
   class CosSpec: public DoubleSpec
   {
     public:
       CosSpec() {}
-      CosSpec(DoubleSpecPtr& value) 
+      CosSpec(const DoubleSpecPtr& value) 
       : value_(value)
       {}
 
@@ -1112,11 +1145,12 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<CosSpec> CosSpecPtr;
 
+
   class TanSpec: public DoubleSpec
   {
     public:
       TanSpec() {}
-      TanSpec(DoubleSpecPtr& value) 
+      TanSpec(const DoubleSpecPtr& value) 
       : value_(value)
       {}
 
@@ -1157,7 +1191,7 @@ class SinSpec: public DoubleSpec
   {
     public:
       ASinSpec() {}
-      ASinSpec(DoubleSpecPtr& value) 
+      ASinSpec(const DoubleSpecPtr& value) 
       : value_(value)
       {}
 
@@ -1193,11 +1227,12 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<ASinSpec> ASinSpecPtr;
 
+
   class ACosSpec: public DoubleSpec
   {
     public:
       ACosSpec() {}
-      ACosSpec(DoubleSpecPtr& value) 
+      ACosSpec(const DoubleSpecPtr& value) 
       : value_(value)
       {}
 
@@ -1233,11 +1268,12 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<ACosSpec> ACosSpecPtr;
 
+
   class ATanSpec: public DoubleSpec
   {
     public:
       ATanSpec() {}
-      ATanSpec(DoubleSpecPtr& value) 
+      ATanSpec(const DoubleSpecPtr& value) 
       : value_(value)
       {}
 
@@ -1273,6 +1309,7 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<ATanSpec> ATanSpecPtr;
 
+
   ///
   /// specifications of vector expressions
   ///
@@ -1281,7 +1318,7 @@ class SinSpec: public DoubleSpec
   {
     public:
       VectorCachedSpec() {}
-      VectorCachedSpec(VectorSpecPtr& vector) 
+      VectorCachedSpec(const VectorSpecPtr& vector) 
       : vector_(vector)
       {}
 
@@ -1316,6 +1353,7 @@ class SinSpec: public DoubleSpec
   };
 
   typedef typename boost::shared_ptr<VectorCachedSpec> VectorCachedSpecPtr;
+
 
   class VectorConstructorSpec: public VectorSpec
   {
@@ -1403,16 +1441,13 @@ class SinSpec: public DoubleSpec
     return VectorConstructorSpecPtr(new VectorConstructorSpec(x, y, z));
   }
 
+
   class VectorAdditionSpec: public VectorSpec
   {
     public:
       VectorAdditionSpec() {}
-      VectorAdditionSpec(VectorSpecPtr& lhs, VectorSpecPtr& rhs) {
+      VectorAdditionSpec(const VectorSpecPtr& lhs, const VectorSpecPtr& rhs) {
         inputs_.push_back(lhs);
-        inputs_.push_back(rhs);
-      }
-      VectorAdditionSpec(boost::shared_ptr<VectorAdditionSpec>& lhs, VectorSpecPtr& rhs) {
-        inputs_ = lhs->inputs_;
         inputs_.push_back(rhs);
       }
 
@@ -1473,16 +1508,13 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<VectorAdditionSpec> VectorAdditionSpecPtr;
 
+
   class VectorSubtractionSpec: public VectorSpec
   {
     public:
       VectorSubtractionSpec() {}
-      VectorSubtractionSpec(VectorSpecPtr& lhs, VectorSpecPtr& rhs) {
+      VectorSubtractionSpec(const VectorSpecPtr& lhs, const VectorSpecPtr& rhs) {
         inputs_.push_back(lhs);
-        inputs_.push_back(rhs);
-      }
-      VectorSubtractionSpec(boost::shared_ptr<VectorSubtractionSpec>& lhs, VectorSpecPtr& rhs) {
-        inputs_ = lhs->inputs_;
         inputs_.push_back(rhs);
       }
 
@@ -1554,42 +1586,44 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<VectorSubtractionSpec> VectorSubtractionSpecPtr;
 
-  class VectorReferenceSpec : public VectorSpec
-  {
-    public:
-      VectorReferenceSpec() {}
-      VectorReferenceSpec(std::string name)
-      : reference_name_(name)
-      { }
 
-      const std::string& get_reference_name() const
-      {
-        return reference_name_;
-      }
+  // class VectorReferenceSpec : public VectorSpec
+  // {
+  //   public:
+  //     VectorReferenceSpec() {}
+  //     VectorReferenceSpec(std::string name)
+  //     : reference_name_(name)
+  //     { }
 
-      void set_reference_name(const std::string& reference_name)
-      {
-        reference_name_ = reference_name;
-      }
+  //     const std::string& get_reference_name() const
+  //     {
+  //       return reference_name_;
+  //     }
 
-      virtual bool equals(const Spec& other) const
-      {
-        if(!dynamic_cast<const VectorReferenceSpec*>(&other))
-          return false;
+  //     void set_reference_name(const std::string& reference_name)
+  //     {
+  //       reference_name_ = reference_name;
+  //     }
 
-        return (dynamic_cast<const VectorReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
-      }
+  //     virtual bool equals(const Spec& other) const
+  //     {
+  //       if(!dynamic_cast<const VectorReferenceSpec*>(&other))
+  //         return false;
 
-      virtual KDL::Expression<KDL::Vector>::Ptr get_expression(const giskard::Scope& scope)
-      {
-        return scope.find_vector_expression(get_reference_name());
-      }
+  //       return (dynamic_cast<const VectorReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
+  //     }
 
-    private:
-      std::string reference_name_;
-  };
+  //     virtual KDL::Expression<KDL::Vector>::Ptr get_expression(const giskard::Scope& scope)
+  //     {
+  //       return scope.find_vector_expression(get_reference_name());
+  //     }
 
-  typedef typename boost::shared_ptr<VectorReferenceSpec> VectorReferenceSpecPtr;
+  //   private:
+  //     std::string reference_name_;
+  // };
+
+  // typedef typename boost::shared_ptr<VectorReferenceSpec> VectorReferenceSpecPtr;
+
 
   class VectorOriginOfSpec : public VectorSpec
   {
@@ -1627,6 +1661,7 @@ class SinSpec: public DoubleSpec
   };
 
   typedef typename boost::shared_ptr<VectorOriginOfSpec> VectorOriginOfSpecPtr;
+
 
   class VectorFrameMultiplicationSpec: public VectorSpec
   {
@@ -1682,6 +1717,7 @@ class SinSpec: public DoubleSpec
   };
 
   typedef typename boost::shared_ptr<VectorFrameMultiplicationSpec> VectorFrameMultiplicationSpecPtr;
+
 
   class VectorRotationMultiplicationSpec: public VectorSpec
   {
@@ -1795,6 +1831,7 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<VectorDoubleMultiplicationSpec> VectorDoubleMultiplicationSpecPtr;
 
+
   class VectorRotationVectorSpec : public VectorSpec
   {
     public:
@@ -1831,6 +1868,7 @@ class SinSpec: public DoubleSpec
   };
 
   typedef typename boost::shared_ptr<VectorRotationVectorSpec> VectorRotationVectorSpecPtr;
+
 
   class VectorCrossSpec: public VectorSpec
   {
@@ -1969,7 +2007,7 @@ class SinSpec: public DoubleSpec
   {
     public:
       AxisAngleSpec() {}
-      AxisAngleSpec(const giskard::VectorSpecPtr& axis, const giskard::DoubleSpecPtr& angle) 
+      AxisAngleSpec(const VectorSpecPtr& axis, const DoubleSpecPtr& angle) 
       : axis_(axis)
       , angle_(angle)
       { }
@@ -2029,6 +2067,11 @@ class SinSpec: public DoubleSpec
   };
 
   typedef typename boost::shared_ptr<AxisAngleSpec> AxisAngleSpecPtr;
+
+  inline AxisAngleSpecPtr axis_angle_spec(const VectorSpecPtr& axis, const DoubleSpecPtr& angle)
+  {
+    return AxisAngleSpecPtr(new AxisAngleSpec(axis, angle));
+  }
 
   class SlerpSpec: public RotationSpec
   {
@@ -2106,42 +2149,44 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<SlerpSpec> SlerpSpecPtr;
 
-  class RotationReferenceSpec : public RotationSpec
-  {
-    public:
-      RotationReferenceSpec() {}
-      RotationReferenceSpec(std::string name) 
-      : reference_name_(name)
-      { }
 
-      const std::string& get_reference_name() const
-      {
-        return reference_name_;
-      }
+  // class RotationReferenceSpec : public RotationSpec
+  // {
+  //   public:
+  //     RotationReferenceSpec() {}
+  //     RotationReferenceSpec(std::string name) 
+  //     : reference_name_(name)
+  //     { }
 
-      void set_reference_name(const std::string& reference_name)
-      {
-        reference_name_ = reference_name;
-      }
+  //     const std::string& get_reference_name() const
+  //     {
+  //       return reference_name_;
+  //     }
 
-      virtual bool equals(const Spec& other) const
-      {
-        if(!dynamic_cast<const RotationReferenceSpec*>(&other))
-          return false;
+  //     void set_reference_name(const std::string& reference_name)
+  //     {
+  //       reference_name_ = reference_name;
+  //     }
 
-        return (dynamic_cast<const RotationReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
-      }
+  //     virtual bool equals(const Spec& other) const
+  //     {
+  //       if(!dynamic_cast<const RotationReferenceSpec*>(&other))
+  //         return false;
 
-      virtual KDL::Expression<KDL::Rotation>::Ptr get_expression(const giskard::Scope& scope)
-      {
-        return scope.find_rotation_expression(get_reference_name());
-      }
+  //       return (dynamic_cast<const RotationReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
+  //     }
 
-    private:
-      std::string reference_name_;
-  };
+  //     virtual KDL::Expression<KDL::Rotation>::Ptr get_expression(const giskard::Scope& scope)
+  //     {
+  //       return scope.find_rotation_expression(get_reference_name());
+  //     }
 
-  typedef typename boost::shared_ptr<RotationReferenceSpec> RotationReferenceSpecPtr;
+  //   private:
+  //     std::string reference_name_;
+  // };
+
+  // typedef typename boost::shared_ptr<RotationReferenceSpec> RotationReferenceSpecPtr;
+
 
   class InverseRotationSpec : public RotationSpec
   {
@@ -2183,8 +2228,7 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<InverseRotationSpec> InverseRotationSpecPtr;
   
-  inline InverseRotationSpecPtr inverse_rotation_spec(const RotationSpecPtr& rotation)
-  {
+  inline InverseRotationSpecPtr inverse_rotation_spec(const RotationSpecPtr& rotation) {
     return InverseRotationSpecPtr(new InverseRotationSpec(rotation));
   }
 
@@ -2197,11 +2241,10 @@ class SinSpec: public DoubleSpec
         inputs_( other.get_inputs() ) {}
       RotationMultiplicationSpec(const std::vector<RotationSpecPtr>& inputs) :
         inputs_( inputs ) {}
-      RotationMultiplicationSpec(const boost::shared_ptr<RotationMultiplicationSpec>& other, const RotationSpecPtr& rot) :
-        inputs_( other->get_inputs() ) 
-        {
-          inputs_.push_back(rot);
-        }
+      RotationMultiplicationSpec(const RotationSpecPtr& lhs, const RotationSpecPtr& rhs) {
+        inputs_.push_back(lhs);
+        inputs_.push_back(rhs);
+      }
 
       ~RotationMultiplicationSpec() {}
 
@@ -2310,6 +2353,11 @@ class SinSpec: public DoubleSpec
   };
 
   typedef typename boost::shared_ptr<FrameCachedSpec> FrameCachedSpecPtr;
+
+  inline FrameCachedSpecPtr frame_cached_spec(const FrameSpecPtr& frame)
+  {
+    return FrameCachedSpecPtr(new FrameCachedSpec(frame));
+  }
 
   class FrameConstructorSpec: public FrameSpec
   {
@@ -2422,10 +2470,10 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<OrientationOfSpec> OrientationOfSpecPtr;
 
-  inline OrientationOfSpecPtr orientation_of_spec(const FrameSpecPtr& frame)
-  {
+  inline OrientationOfSpecPtr orientation_of_spec(const FrameSpecPtr& frame) {
     return OrientationOfSpecPtr(new OrientationOfSpec(frame));
   }
+
 
   class FrameMultiplicationSpec: public FrameSpec
   {
@@ -2498,42 +2546,44 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<FrameMultiplicationSpec> FrameMultiplicationSpecPtr;
 
-  class FrameReferenceSpec : public FrameSpec
-  {
-    public:
-      FrameReferenceSpec() {}
-      FrameReferenceSpec(std::string name)
-      : reference_name_(name)
-      {}
 
-      const std::string& get_reference_name() const
-      {
-        return reference_name_;
-      }
+  // class FrameReferenceSpec : public FrameSpec
+  // {
+  //   public:
+  //     FrameReferenceSpec() {}
+  //     FrameReferenceSpec(std::string name)
+  //     : reference_name_(name)
+  //     {}
 
-      void set_reference_name(const std::string& reference_name)
-      {
-        reference_name_ = reference_name;
-      }
+  //     const std::string& get_reference_name() const
+  //     {
+  //       return reference_name_;
+  //     }
 
-      virtual bool equals(const Spec& other) const
-      {
-        if(!dynamic_cast<const FrameReferenceSpec*>(&other))
-          return false;
+  //     void set_reference_name(const std::string& reference_name)
+  //     {
+  //       reference_name_ = reference_name;
+  //     }
 
-        return (dynamic_cast<const FrameReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
-      }
+  //     virtual bool equals(const Spec& other) const
+  //     {
+  //       if(!dynamic_cast<const FrameReferenceSpec*>(&other))
+  //         return false;
 
-      virtual KDL::Expression<KDL::Frame>::Ptr get_expression(const giskard::Scope& scope)
-      {
-        return scope.find_frame_expression(get_reference_name());
-      }
+  //       return (dynamic_cast<const FrameReferenceSpec*>(&other)->get_reference_name().compare(this->get_reference_name()) == 0);
+  //     }
 
-    private:
-      std::string reference_name_;
-  };
+  //     virtual KDL::Expression<KDL::Frame>::Ptr get_expression(const giskard::Scope& scope)
+  //     {
+  //       return scope.find_frame_expression(get_reference_name());
+  //     }
 
-  typedef typename boost::shared_ptr<FrameReferenceSpec> FrameReferenceSpecPtr;
+  //   private:
+  //     std::string reference_name_;
+  // };
+
+  // typedef typename boost::shared_ptr<FrameReferenceSpec> FrameReferenceSpecPtr;
+
 
   class InverseFrameSpec: public FrameSpec
   {
@@ -2575,29 +2625,6 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<InverseFrameSpec> InverseFrameSpecPtr;
 
-  ///
-  /// Specification of a Scope
-  ///
-
-  class ScopeEntry : public Spec
-  {
-    public:
-      inline gkDType type() const { return tNamedX; }
-
-      virtual bool equals(const Spec& other) const {
-        if (!dynamic_cast<const ScopeEntry*>(&other))
-          return false;
-
-        const ScopeEntry* b = dynamic_cast<const ScopeEntry*>(&other);
-      
-        return name.compare(b->name) == 0 && spec && spec->equals(*b->spec);
-      }
-
-      std::string name;
-      giskard::SpecPtr spec;
-  };
-
-  typedef std::vector<ScopeEntry> ScopeSpec;
 
   class ControllableConstraintSpec : public Spec
   {
@@ -2615,7 +2642,9 @@ class SinSpec: public DoubleSpec
       , name_(name)
       {}
 
-      inline gkDType type() const { return tContC; }
+      static const gkDType TYPE = tContC;
+
+      inline gkDType type() const { return TYPE; }
 
       virtual bool equals(const Spec& other) const {
         if (!dynamic_cast<const ControllableConstraintSpec*>(&other))
@@ -2637,6 +2666,7 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<ControllableConstraintSpec> ControllableConstraintSpecPtr;
   
+
   class SoftConstraintSpec : public Spec
   {
     public:
@@ -2653,7 +2683,9 @@ class SinSpec: public DoubleSpec
       , name_(name)
       {}
 
-      inline gkDType type() const { return tSoftC; }
+      static const gkDType TYPE = tSoftC;
+
+      inline gkDType type() const { return TYPE; }
 
       virtual bool equals(const Spec& other) const {
         if (!dynamic_cast<const SoftConstraintSpec*>(&other))
@@ -2674,6 +2706,7 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<SoftConstraintSpec> SoftConstraintSpecPtr;
 
+
   class HardConstraintSpec : public Spec
   {
     public:
@@ -2686,7 +2719,9 @@ class SinSpec: public DoubleSpec
       , upper_(upper)
       {}
 
-      inline gkDType type() const { return tHardC; }
+      static const gkDType TYPE = tHardC;
+
+      inline gkDType type() const { return TYPE; }
 
       virtual bool equals(const Spec& other) const {
         if (!dynamic_cast<const HardConstraintSpec*>(&other))
@@ -2703,12 +2738,15 @@ class SinSpec: public DoubleSpec
 
   typedef typename boost::shared_ptr<HardConstraintSpec> HardConstraintSpecPtr;
 
+
   class StringSpec : public Spec {
     public:
       StringSpec(const std::string& val)
       : value(val) {}
 
-      inline gkDType type() const { return tString; }
+      static const gkDType TYPE = tString;
+
+      inline gkDType type() const { return TYPE; }
       virtual bool equals(const Spec& other) const {
         if (!dynamic_cast<const StringSpec*>(&other))
           return false;
@@ -2726,6 +2764,737 @@ class SinSpec: public DoubleSpec
     private:
       std::string value;
   };
+
+  typedef typename boost::shared_ptr<StringSpec> StringSpecPtr;
+
+/// CONTAINERS ----------------------------------------------------------------------------------------
+
+  struct IContainer {
+    virtual gkDType innerType() const = 0;
+  };
+
+  class AListSpec : public Spec, public IContainer {
+  public:
+    static const gkDType TYPE = tList;
+
+    virtual gkDType type() const {
+      return tList;
+    }
+  };
+
+  class AMapSpec : public Spec, public IContainer {
+  public:
+    static const gkDType TYPE = tMap;
+
+    virtual gkDType type() const {
+      return tMap;
+    }
+  };
+
+  template<class T>
+  class ListSpec : public AListSpec {
+  public:
+    ListSpec() {}
+    ListSpec(std::vector<boost::shared_ptr<T>> _v)
+    : v(_v) {}
+    ListSpec(std::vector<SpecPtr> _v) {
+      for (size_t i = 0; i < _v.size(); i++) {
+        boost::shared_ptr<T> ptr = boost::dynamic_pointer_cast<T>(_v[i]);
+        if (!ptr)
+          throw std::exception();
+        v.push_back(ptr); 
+      }
+    }
+
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const ListSpec<T>*>(&other))
+        return false;
+
+      return dynamic_cast<const ListSpec<T>*>(&other)->v == v;
+    }
+
+    std::vector<boost::shared_ptr<T>> getContents() {
+      return v;
+    }
+
+    gkDType innerType() const {
+      return T::TYPE;
+    }
+
+  private:
+    std::vector<boost::shared_ptr<T>> v;
+  };
+
+  template<class T>
+  class MapSpec : public AMapSpec {
+  public:
+    MapSpec() {}
+    MapSpec(std::unordered_map<std::string, boost::shared_ptr<T>> _m)
+    : m(_m) {}
+
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const MapSpec<T>*>(&other))
+        return false;
+
+      return dynamic_cast<const MapSpec<T>*>(&other)->m == m;
+    }    
+
+    std::unordered_map<std::string, boost::shared_ptr<T>> getContents() {
+      return m;
+    }
+
+    gkDType innerType() const {
+      return T::TYPE;
+    }
+
+  private:
+    std::unordered_map<std::string, boost::shared_ptr<T>> m;
+  };
+
+/// PREDECLARATIONS -----------------------------------------------------------------------------------
+/// C++ is a difficult patient...
+
+  struct IScope {
+    const std::string filePath;
+  };
+
+  typedef typename boost::shared_ptr<IScope> IScopePtr;
+
+/// EXCEPTIONS ----------------------------------------------------------------------------------------
+
+  struct ScopeException : std::exception {
+    ScopeException(const IScopePtr& _scope)
+    : scope(_scope) 
+    {}
+    
+    virtual const char* what() const noexcept {
+      return ("In scope of file: " + scope->filePath).c_str();
+    }
+  private:
+    const IScopePtr scope;
+  };
+
+  struct CustomScopeException : public ScopeException {
+    CustomScopeException(const IScopePtr& _scope, std::string _msg)
+    : ScopeException(_scope) 
+    , msg(_msg)
+    {}
+    
+    virtual const char* what() const noexcept {
+      return (std::string(ScopeException::what()) + "\n| " + msg + "\n").c_str();
+    }
+  private:
+    const std::string msg;
+  };
+
+  struct SemanticException : public CustomScopeException {
+    SemanticException(const IScopePtr& scope, const std::string& msg)
+    : CustomScopeException(scope, msg)
+    {}
+  };
+
+
+  struct ISocketSpec {
+    virtual bool setReferencedSpec(boost::shared_ptr<Spec>& val) = 0;
+    virtual gkDType getSocketType() const = 0;
+    virtual std::string getName() const {
+      return name;
+    }
+
+  protected:
+    std::string name;
+  };
+  
+  struct MismatchedTypeException : std::exception {
+    MismatchedTypeException(const gkDType _exp, const gkDType _got)
+    : exp(_exp)
+    , got(_got) {}
+    
+    const char* what() const noexcept {
+      return ("Expected: '" + gkTypeNames[exp] + "' Got: '" + gkTypeNames[got] + "'").c_str();
+    }
+  private:
+    const gkDType exp;
+    const gkDType got;
+  };
+
+/// FUNCTIONS ----------------------------------------------------------------------------------------
+
+  typedef typename boost::shared_ptr<ISocketSpec> ISocketSpecPtr;
+
+  template <class T>
+  class ASocketSpec : public T, public ISocketSpec {
+  public:
+    ASocketSpec(std::string& _name) { 
+      name = _name;
+    }
+
+    bool setReferencedSpec(boost::shared_ptr<Spec>& val) {
+      if (getSocketType() == val->type()) {
+        value = boost::static_pointer_cast<T>(val);
+        return true;
+      }
+
+      throw MismatchedTypeException(getSocketType(), val->type());
+    }
+
+    gkDType getSocketType() const {
+      return T::TYPE;
+    }
+
+  protected:
+    boost::shared_ptr<T> value;
+  };
+
+  template <class T, typename R>
+  class KDLSocketSpec : public ASocketSpec<T> {
+  public:
+    KDLSocketSpec(std::string& name) 
+    : ASocketSpec<T>(name) 
+    {}
+
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const KDLSocketSpec<T, R>*>(&other))
+        return false;
+
+      return dynamic_cast<const KDLSocketSpec<T, R>*>(&other)->value->equals(*(this->value));
+    }
+
+    virtual typename KDL::Expression<R>::Ptr get_expression(const giskard::Scope& scope) {
+      return this->value->get_expression(scope);
+    }
+  };
+
+  template <class T, typename R>
+  class GeneralSocketSpec : public ASocketSpec<T> {
+  public:
+    GeneralSocketSpec(std::string& name) 
+    : ASocketSpec<T>(name) 
+    {}
+
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const GeneralSocketSpec<T, R>*>(&other))
+        return false;
+
+      return dynamic_cast<const GeneralSocketSpec<T, R>*>(&other)->value->equals(*(this->value));
+    }
+
+    virtual typename boost::shared_ptr<R> getSpec() {
+      return this->value;
+    }
+  };
+
+  // template <class T, typename R, class S>
+  // class ContainerSocketSpec : public ASocketSpec<T> {
+  // public:
+  //   ContainerSocketSpec(std::string& name) 
+  //   : ASocketSpec(name) 
+  //   {}
+
+  //   virtual bool equals(const Spec& other) const {
+  //     if (!dynamic_cast<const ContainerSocketSpec<T, R, S>*>(&other))
+  //       return false;
+
+  //     return dynamic_cast<const ContainerSocketSpec<T, R, S>*>(&other)->value->equals(*value);
+  //   }
+
+  //   virtual  getContents() {
+  //     return value;
+  //   }
+  // };
+
+  typedef KDLSocketSpec<DoubleSpec, double> DoubleSocketSpec;
+  typedef typename boost::shared_ptr<DoubleSocketSpec> DoubleSocketSpecPtr;
+
+  typedef KDLSocketSpec<VectorSpec, KDL::Vector> VectorSocketSpec;
+  typedef typename boost::shared_ptr<VectorSocketSpec> VectorSocketSpecPtr;
+
+  typedef KDLSocketSpec<RotationSpec, KDL::Rotation> RotationSocketSpec;
+  typedef typename boost::shared_ptr<RotationSocketSpec> RotationSocketSpecPtr;
+
+  typedef KDLSocketSpec<FrameSpec, KDL::Frame> FrameSocketSpec;
+  typedef typename boost::shared_ptr<FrameSocketSpec> FrameSocketSpecPtr;
+
+  typedef KDLSocketSpec<FrameSpec, KDL::Frame> FrameSocketSpec;
+  typedef typename boost::shared_ptr<FrameSocketSpec> FrameSocketSpecPtr;
+
+  template <class T>
+  boost::shared_ptr<T> function_socket(const std::string& name) {
+    return boost::shared_ptr<T>(new T(name));
+  }
+
+  struct AFunctionSpec {
+    AFunctionSpec(IScopePtr declScope, std::string _name)
+    : declaringScope(declScope)
+    , name(_name) {}
+
+    virtual gkDType getType() = 0;
+    virtual void setSpec(SpecPtr& spec) = 0;
+
+    virtual void setArguments(std::vector<ISocketSpecPtr> args) {
+      arguments = args;
+    }
+    
+    std::string getName() const {
+      return name;
+    }
+
+    virtual bool setArgument(size_t idx, SpecPtr& ptr) {
+      if (idx >= 0 && idx < arguments.size()) {
+        if (arguments[idx]->setReferencedSpec(ptr))
+          return true;
+      }
+
+      return false;
+    } 
+
+    virtual bool setArgument(const std::string& name, SpecPtr& ptr) {
+      auto it = argIdx.find(name);
+      if (it != argIdx.end()) {
+        return setArgument(it->second, ptr);
+      }
+      
+      throw std::exception();//"'" + name + "' is not an argument!");
+    }
+
+    gkDType getArgumentType(size_t i) {
+      if (i < 0 || i >= arguments.size())
+        return gkDType::tNONE;
+      
+      return arguments[i]->getSocketType();
+    }
+
+    gkDType getArgumentType(const std::string& name) {
+      auto it = argIdx.find(name);
+      if (it == argIdx.end())
+        return gkDType::tNONE;
+
+      return getArgumentType(it->second);
+    }
+
+    void getArgumentSignature(std::vector<gkDType> &v) {
+      for (size_t i = 0; i < arguments.size(); i++) {
+        v.push_back(arguments[i]->getSocketType());
+      }
+    }
+
+    size_t getArgumentsSize() {
+      return arguments.size();
+    }
+
+    const std::string name;
+    const IScopePtr declaringScope;
+  private:
+    std::unordered_map<std::string, int> argIdx;
+    std::vector<ISocketSpecPtr> arguments;
+  };
+
+
+  template <class T>
+  class FunctionSpec : public AFunctionSpec {
+  public:
+    FunctionSpec(IScopePtr declScope, std::string name) 
+    : AFunctionSpec(declScope, name)
+    {}
+    FunctionSpec(IScopePtr declScope, std::string name, boost::shared_ptr<T>& spec)
+    : AFunctionSpec(name)
+    , specification(spec) {}
+
+
+    virtual void setSpec(SpecPtr& spec) {
+      specification = boost::dynamic_pointer_cast<T>(spec);
+
+      if (!specification)
+        throw MismatchedTypeException(getType(), spec->type());
+    }
+
+    inline boost::shared_ptr<T> getSpec() {
+      return specification;
+    }
+
+    gkDType getType() {
+      return T::TYPE;
+    }
+
+  private:
+    boost::shared_ptr<T> specification;
+  };
+
+  typedef typename boost::shared_ptr<AFunctionSpec> AFunctionSpecPtr;
+
+  typedef FunctionSpec<DoubleSpec> DoubleFunctionSpec;
+  typedef typename boost::shared_ptr<DoubleFunctionSpec> DoubleFunctionSpecPtr;
+
+  typedef FunctionSpec<VectorSpec> VectorFunctionSpec;
+  typedef typename boost::shared_ptr<VectorFunctionSpec> VectorFunctionSpecPtr;
+
+  typedef FunctionSpec<RotationSpec> RotationFunctionSpec;
+  typedef typename boost::shared_ptr<RotationFunctionSpec> RotationFunctionSpecPtr;
+
+  typedef FunctionSpec<FrameSpec> FrameFunctionSpec;
+  typedef typename boost::shared_ptr<FrameFunctionSpec> FrameFunctionSpecPtr;
+
+  template <typename T>
+  inline typename boost::shared_ptr<FunctionSpec<T>>function_spec(std::string name, boost::shared_ptr<T>& spec) {
+    return boost::shared_ptr<FunctionSpec<T>>(new FunctionSpec<T>(name, spec));
+  }
+
+  template <class T, typename R>
+  class FunctionInstanceSpec : public T {
+  public:
+    FunctionInstanceSpec() {}
+    FunctionInstanceSpec(boost::shared_ptr<FunctionSpec<T>> f, std::vector<SpecPtr>& args) 
+    : function(f) {
+
+    }
+
+    void setFunction(boost::shared_ptr<FunctionSpec<T>> f) {
+      function = f;
+    }
+
+    void addArgument(const SpecPtr& arg) {
+      gkDType argT = function->getArgumentType(arguments.size());
+      if (argT != arg->type())
+        throw MismatchedTypeException(argT, arg->type());
+
+      arguments.push_back(arg);
+    }
+
+    void setArguments(std::vector<SpecPtr>& args) {
+      if (args.size() != function->getArgumentsSize())
+        throw CustomScopeException(function->declaringScope, "Invalid number of arguments for function: "+function->name);      
+
+      for (size_t i = 0; i < args.size(); i++) {
+        gkDType argT = function->getArgumentType(i);
+        if (argT != args[i]->type())
+          throw MismatchedTypeException(argT, args[i]->type());
+      }
+
+      arguments = args;
+    }
+
+    boost::shared_ptr<T> getSpec() {
+      if (!function)
+        return boost::shared_ptr<T>(0);
+
+      for (size_t i = 0; i < arguments.size(); i++) {
+        function->setArgument(i, arguments[i]);
+      }
+
+      return function->getSpec();
+    }
+
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const FunctionInstanceSpec<T, R>*>(&other))
+        return false;
+
+      const FunctionInstanceSpec<T, R>* op = dynamic_cast<const FunctionInstanceSpec<T, R>*>(&other);
+
+      if (op->arguments.size() != arguments.size())
+        return false;
+
+      for (size_t i = 0; i < arguments.size(); i++) {
+        if (!arguments[i]->equals(*op->arguments[i]))
+          return false;
+      }
+
+      return function->getSpec()->equals(*(op->function->getSpec()));
+    }
+
+    virtual typename KDL::Expression<R>::Ptr get_expression(const giskard::Scope& scope) {
+      return getSpec()->get_expression(scope);
+    }
+
+  private:
+    boost::shared_ptr<FunctionSpec<T>> function;
+
+    std::vector<SpecPtr> arguments;
+  };
+
+  typedef FunctionInstanceSpec<DoubleSpec, double> DoubleFunctionInstanceSpec;
+  typedef typename boost::shared_ptr<DoubleFunctionInstanceSpec> DoubleFunctionInstanceSpecPtr;
+
+  typedef FunctionInstanceSpec<VectorSpec, KDL::Vector> VectorFunctionInstanceSpec;
+  typedef typename boost::shared_ptr<VectorFunctionInstanceSpec> VectorFunctionInstanceSpecPtr;
+
+  typedef FunctionInstanceSpec<RotationSpec, KDL::Rotation> RotationFunctionInstanceSpec;
+  typedef typename boost::shared_ptr<RotationFunctionInstanceSpec> RotationFunctionInstanceSpecPtr;
+
+  typedef FunctionInstanceSpec<FrameSpec, KDL::Frame> FrameFunctionInstanceSpec;
+  typedef typename boost::shared_ptr<FrameFunctionInstanceSpec> FrameFunctionInstanceSpecPtr;
+
+  /// ~FUNCTIONS ----------------------------------------------------------------------------------
+
+  ///
+  /// Specification of a Scope
+  ///
+
+  class ScopeEntry : public Spec
+  {
+    public:
+      ScopeEntry() {}
+      ScopeEntry(std::string& _name, const SpecPtr& _spec)
+      : name(_name)
+      , spec(_spec)
+      { }
+
+      inline gkDType type() const { return tNamedX; }
+
+      virtual bool equals(const Spec& other) const {
+        if (!dynamic_cast<const ScopeEntry*>(&other))
+          return false;
+
+        const ScopeEntry* b = dynamic_cast<const ScopeEntry*>(&other);
+      
+        return name.compare(b->name) == 0 && spec && spec->equals(*b->spec);
+      }
+
+      std::string name;
+      giskard::SpecPtr spec;
+  };
+
+  typedef typename boost::shared_ptr<ScopeEntry> ScopeEntryPtr;
+
+  inline ScopeEntryPtr inverse_frame_spec(std::string name, const SpecPtr& spec)
+  {
+    return ScopeEntryPtr(new ScopeEntry(name, spec));
+  }
+
+  typedef std::vector<ScopeEntry> ScopeSpec;
+
+
+  class Scope2 : public IScope, public Spec {
+  public:
+    Scope2(const std::string _filePath) 
+    : filePath(_filePath) {}
+    Scope2(const std::string _filePath, boost::shared_ptr<Scope2>& super) 
+    : filePath(_filePath) 
+      ,predefined ({"sin","cos","tan","asin","acos","atan","abs","slerp","fmod","max","min","if","norm","frame","rotation","cross","vec3","invert","controllableC","softC","hardC"})
+    {
+
+      addSuperScope(super);
+    }
+
+    const std::vector<std::string> predefined;
+
+    virtual bool equals(const Spec& other) const {
+      return false;
+    };
+    
+    virtual gkDType type() const {
+      return tNamespace;
+    };
+
+    void addSuperScope(boost::shared_ptr<Scope2>& super) {
+      superScopes.push_back(super);
+    }
+
+    void addNamedScope(const std::string& name, boost::shared_ptr<Scope2>& super) {
+      if (isNameTaken(name))
+        throw SemanticException(boost::shared_ptr<Scope2>(this), "Can not add scope with name '" + name + "'! Name is already taken");
+
+      namedScopes[name] = super;
+    }    
+
+    void addNamedSpec(const std::string& name, SpecPtr& spec) {
+      if (isNameTaken(name))
+        throw SemanticException(boost::shared_ptr<Scope2>(this), "Can not add expression with name '" + name + "'! Name is already taken");
+
+      specs[name] = spec;
+    }
+
+    void addFunctionSpec(AFunctionSpecPtr& spec) {
+      std::string name = spec->getName();
+      if (isNameTaken(name))
+        throw SemanticException(boost::shared_ptr<Scope2>(this), "Can not add function with name '" + name + "'! Name is already taken");
+
+      functions[name] = spec;
+    }
+
+    boost::shared_ptr<Scope2> getScope(const std::string& name) {
+      auto it = namedScopes.find(name);
+      if (it != namedScopes.end()) {
+        return it->second;
+      }
+    }
+
+    SpecPtr getLocalSpec(const std::string& name) {
+      auto it = specs.find(name);
+      if (it != specs.end()) {
+        return it->second;
+      }
+      return SpecPtr();
+    }
+
+    SpecPtr getSpec(const std::string& name) {
+      SpecPtr out = getLocalSpec(name);
+
+      if (out)
+        return out;
+
+      for (size_t i = superScopes.size() - 1; i >= 0; i--) {
+        SpecPtr out = superScopes[i]->getSpec(name);
+        if (out)
+          return out;
+      }
+
+      return SpecPtr();
+    }
+
+    template <class T>
+    boost::shared_ptr<T> getLocalSpec(const std::string& name) {
+      return boost::dynamic_pointer_cast<T>(getLocalSpec(name));
+    }
+
+    template <class T>
+    boost::shared_ptr<T> getSpec(const std::string& name) {
+      return boost::dynamic_pointer_cast<T>(getSpec(name));
+    }
+
+
+    AFunctionSpecPtr getLocalFunctionSpec(const std::string& name) {
+      auto it = functions.find(name);
+      if (it != functions.end()) {
+        return it->second;
+      }
+      return AFunctionSpecPtr();
+    }
+
+    AFunctionSpecPtr getFunctionSpec(const std::string& name) {
+      AFunctionSpecPtr out = getLocalFunctionSpec(name);
+
+      if (out)
+        return out;
+
+      for (size_t i = superScopes.size() - 1; i >= 0; i--) {
+        AFunctionSpecPtr out = superScopes[i]->getFunctionSpec(name);
+        if (out)
+          return out;
+      }
+
+      return AFunctionSpecPtr();
+    }
+
+    template <class T>
+    boost::shared_ptr<FunctionSpec<T>> getLocalFunctionSpec(const std::string& name) {
+      return boost::dynamic_pointer_cast<FunctionSpec<T>>(getLocalFunctionSpec(name));
+    }
+
+    template <class T>
+    boost::shared_ptr<FunctionSpec<T>> getFunctionSpec(const std::string& name) {
+      return boost::dynamic_pointer_cast<FunctionSpec<T>>(getFunctionSpec(name));
+    }
+
+    const std::string filePath;
+
+    inline bool isNameTaken(const std::string& name) {
+      return namedScopes.find(name) != namedScopes.end() 
+      || std::find(predefined.begin(), predefined.end(), name) != predefined.end() 
+              || getSpec(name) || getFunctionSpec(name);
+    }
+  private:
+
+    std::vector<boost::shared_ptr<Scope2>> superScopes;
+    std::unordered_map<std::string, AFunctionSpecPtr> functions;
+    std::unordered_map<std::string, SpecPtr> specs;
+    std::unordered_map<std::string, boost::shared_ptr<Scope2>> namedScopes;
+  };
+
+  typedef typename boost::shared_ptr<Scope2> Scope2Ptr;
+
+/// REFERENCES ----------------------------------------------------------------------------------------
+
+  template <class T>
+  class AReferenceSpec : public T {
+  public:
+    AReferenceSpec(const std::string& _name, const Scope2Ptr& _declScope, const boost::shared_ptr<T>& _spec) 
+    : name(_name)
+    , declScope(_declScope)
+    , spec(_spec) { }
+  
+    gkDType type() {
+      return T::TYPE;
+    }
+
+  protected:
+    std::string name;
+    const Scope2Ptr declScope;
+    const boost::shared_ptr<T> spec;
+  };
+
+  template <class T, typename R>
+  class KDLReferenceSpec : public AReferenceSpec<T> {
+  public:
+    KDLReferenceSpec() 
+    : AReferenceSpec<T>("", Scope2Ptr(), boost::shared_ptr<T>())
+    {}
+    KDLReferenceSpec(const std::string& name, const Scope2Ptr& declScope, const boost::shared_ptr<T>& spec) 
+    : AReferenceSpec<T>(name, declScope, spec)
+    {}
+    KDLReferenceSpec(std::string name) 
+    : AReferenceSpec<T>(name, Scope2Ptr(), boost::shared_ptr<T>())
+    {}
+  
+    const std::string& get_reference_name() const {
+      return this->name;
+    }
+
+    void set_reference_name(const std::string& reference_name) {
+      this->name = reference_name;
+    }
+
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const KDLReferenceSpec<T, R>*>(&other))
+        return false;
+
+      const KDLReferenceSpec<T,R>* pOther = dynamic_cast<const KDLReferenceSpec<T, R>*>(&other);
+
+      return this->name == pOther->name && pOther->spec == this->spec && (!this->spec || this->spec->equals(*(pOther->spec)));
+    }
+
+    virtual typename KDL::Expression<R>::Ptr get_expression(const giskard::Scope& scope) {
+      if (this->spec)
+        return this->spec->get_expression(scope);
+      else
+        return scope.find_expression<R>(this->get_reference_name());
+    }
+  };
+
+  template <class T>
+  class SpecReferenceSpec : public AReferenceSpec<T> {
+  public:
+    SpecReferenceSpec(const std::string& name, const Scope2Ptr& declScope, const boost::shared_ptr<T>& spec) 
+    : AReferenceSpec<T>(name, declScope, spec)
+    { }
+  
+    virtual bool equals(const Spec& other) const {
+      if (!dynamic_cast<const SpecReferenceSpec<T>*>(&other))
+        return false;
+
+      const SpecReferenceSpec<T>* pOther = dynamic_cast<const SpecReferenceSpec<T>*>(&other);
+
+      return this->name == pOther->name && pOther->spec == this->spec && (!this->spec || this->spec->equals(*(pOther->spec)));
+    }
+
+    virtual typename boost::shared_ptr<T> getSpec() {
+      return this->spec;
+    }
+  };
+
+  typedef KDLReferenceSpec<DoubleSpec, double> DoubleReferenceSpec;
+  typedef typename boost::shared_ptr<DoubleReferenceSpec> DoubleReferenceSpecPtr;
+
+  typedef KDLReferenceSpec<VectorSpec, KDL::Vector> VectorReferenceSpec;
+  typedef typename boost::shared_ptr<VectorReferenceSpec> VectorReferenceSpecPtr;
+
+  typedef KDLReferenceSpec<RotationSpec, KDL::Rotation> RotationReferenceSpec;
+  typedef typename boost::shared_ptr<RotationReferenceSpec> RotationReferenceSpecPtr;
+
+  typedef KDLReferenceSpec<FrameSpec, KDL::Frame> FrameReferenceSpec;
+  typedef typename boost::shared_ptr<FrameReferenceSpec> FrameReferenceSpecPtr;
+
+  typedef KDLReferenceSpec<FrameSpec, KDL::Frame> FrameReferenceSpec;
+  typedef typename boost::shared_ptr<FrameReferenceSpec> FrameReferenceSpecPtr;
 
   class QPControllerSpec
   {

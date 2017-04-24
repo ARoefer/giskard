@@ -29,5 +29,6 @@
 #include <giskard/scope.hpp>
 #include <giskard/specifications.hpp>
 #include <giskard/yaml_parser.hpp>
+#include <giskard/giskard_parser.hpp>
 
 #endif // GISKARD_GISKARD_HPP

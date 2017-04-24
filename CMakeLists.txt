@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(giskard)
 
-find_package(catkin REQUIRED COMPONENTS expressiongraph qpoases kdl_parser)
+find_package(catkin REQUIRED COMPONENTS expressiongraph qpoases kdl_parser roscpp)
 find_package(Boost REQUIRED)
 
 # setting additional cmake flags, used for integration with Coveralls.io
@@ -12,6 +12,7 @@ find_package(PkgConfig)
 pkg_check_modules(YamlCpp yaml-cpp)
 find_path(yaml_cpp_INCLUDE_DIRS yaml-cpp/yaml.h PATH_SUFFIXES include)
 find_library(yaml_cpp_LIBRARIES NAMES yaml-cpp)
+add_definitions(-std=c++11 -g)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -64,6 +65,7 @@ set(TEST_SRCS
   test/${PROJECT_NAME}/slerp.cpp
   test/${PROJECT_NAME}/vector_expression_generation.cpp
   test/${PROJECT_NAME}/yaml_parser.cpp
+  test/${PROJECT_NAME}/giskard_parser_semantic.cpp
   )
 
 catkin_add_gtest(${PROJECT_NAME}-test ${TEST_SRCS}
