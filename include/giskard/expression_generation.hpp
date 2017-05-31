@@ -24,6 +24,7 @@
 #include <giskard/scope.hpp>
 #include <giskard/qp_controller.hpp>
 #include <giskard/specifications.hpp>
+#include <unordered_map>
 
 namespace giskard
 {
@@ -64,18 +65,33 @@ namespace giskard
     std::vector< KDL::Expression<double>::Ptr > controllable_lower, controllable_upper,
         controllable_weight;
     std::vector<std::string> controllable_name;
-    for(size_t i=0; i<spec.controllable_constraints_.size(); ++i)
-    {
-      if(spec.controllable_constraints_[i].input_number_ != i)
-        throw std::invalid_argument("QPController generation: controllable constraint at position " + 
-            boost::lexical_cast<std::string>(i) + " has not input number " + 
-            boost::lexical_cast<std::string>(i) + ". Instead it has incorrect input number: " +
-            boost::lexical_cast<std::string>(spec.controllable_constraints_[i].input_number_));
+    std::vector<std::string> jointInputs = scope.get_joint_inputs();
 
-      controllable_lower.push_back(spec.controllable_constraints_[i].lower_->get_expression(scope));
-      controllable_upper.push_back(spec.controllable_constraints_[i].upper_->get_expression(scope));
-      controllable_weight.push_back(spec.controllable_constraints_[i].weight_->get_expression(scope));
-      controllable_name.push_back(spec.controllable_constraints_[i].name_);
+    std::unordered_map<std::string, const ControllableConstraintSpec*> unresolvedControls;
+    for(size_t i=0; i < spec.controllable_constraints_.size(); i++) {
+      if (unresolvedControls.find(spec.controllable_constraints_[i].input) != unresolvedControls.end())
+        throw std::invalid_argument("There is already a controllable constraint for input '" + spec.controllable_constraints_[i].input + "'");
+
+      unresolvedControls[spec.controllable_constraints_[i].input] = &spec.controllable_constraints_[i];
+    }
+
+    for(size_t i=0; i<jointInputs.size(); ++i)
+    {
+      auto it = unresolvedControls.find(jointInputs[i]);
+      if (it != unresolvedControls.end()) {
+        controllable_lower.push_back(it->second->lower_->get_expression(scope));
+        controllable_upper.push_back(it->second->upper_->get_expression(scope));
+        controllable_weight.push_back(it->second->weight_->get_expression(scope));
+        controllable_name.push_back(it->second->input);
+        unresolvedControls.erase(it);
+      }
+    }
+
+    if (unresolvedControls.size() > 0) {
+      std::string msg = "Unresolved controllable constraints in controller: ";
+      for (auto it = unresolvedControls.begin(); it != unresolvedControls.end(); it++)
+        msg += it->first + " ";
+      throw std::invalid_argument(msg);
     }
 
     // generate soft constraints
