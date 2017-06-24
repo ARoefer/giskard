@@ -519,6 +519,36 @@ namespace YAML {
     }
   };
 
+  inline bool is_max(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["max"] &&
+    node["max"].IsSequence() && (node["max"].size() == 2);
+  }
+
+  template<>
+  struct convert<giskard_core::MaxSpecPtr>
+  {
+    static Node encode(const giskard_core::MaxSpecPtr& rhs) 
+    {
+      Node node;
+      node["max"][0] = rhs->get_lhs();
+      node["max"][1] = rhs->get_rhs();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::MaxSpecPtr& rhs) 
+    {
+      if(!is_max(node))
+        return false;
+
+      rhs = giskard_core::MaxSpecPtr(new giskard_core::MaxSpec()); 
+      rhs->set_lhs(node["max"][0].as< giskard_core::DoubleSpecPtr >());
+      rhs->set_rhs(node["max"][1].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
   inline bool is_double_if(const Node& node)
   {
     return node.IsMap() && (node.size() == 1) && node["double-if"] &&
@@ -546,6 +576,168 @@ namespace YAML {
       rhs->set_condition(node["double-if"][0].as< giskard_core::DoubleSpecPtr >());
       rhs->set_if(node["double-if"][1].as< giskard_core::DoubleSpecPtr >());
       rhs->set_else(node["double-if"][2].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
+  inline bool is_sin(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["sin"];
+  }
+
+  template<>
+  struct convert<giskard_core::SinSpecPtr>
+  {
+    static Node encode(const giskard_core::SinSpecPtr& rhs) 
+    {
+      Node node;
+      node["sin"] = rhs->get_value();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::SinSpecPtr& rhs) 
+    {
+      if(!is_sin(node))
+        return false;
+
+      rhs = giskard_core::SinSpecPtr(new giskard_core::SinSpec()); 
+      rhs->set_value(node["sin"].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
+  inline bool is_cos(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["cos"];
+  }
+
+  template<>
+  struct convert<giskard_core::CosSpecPtr>
+  {
+    static Node encode(const giskard_core::CosSpecPtr& rhs) 
+    {
+      Node node;
+      node["cos"] = rhs->get_value();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::CosSpecPtr& rhs) 
+    {
+      if(!is_cos(node))
+        return false;
+
+      rhs = giskard_core::CosSpecPtr(new giskard_core::CosSpec()); 
+      rhs->set_value(node["cos"].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
+  inline bool is_tan(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["tan"];
+  }
+
+  template<>
+  struct convert<giskard_core::TanSpecPtr>
+  {
+    static Node encode(const giskard_core::TanSpecPtr& rhs) 
+    {
+      Node node;
+      node["tan"] = rhs->get_value();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::TanSpecPtr& rhs) 
+    {
+      if(!is_tan(node))
+        return false;
+
+      rhs = giskard_core::TanSpecPtr(new giskard_core::TanSpec()); 
+      rhs->set_value(node["tan"].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
+  inline bool is_asin(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["asin"];
+  }
+
+  template<>
+  struct convert<giskard_core::ASinSpecPtr>
+  {
+    static Node encode(const giskard_core::ASinSpecPtr& rhs) 
+    {
+      Node node;
+      node["asin"] = rhs->get_value();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::ASinSpecPtr& rhs) 
+    {
+      if(!is_asin(node))
+        return false;
+
+      rhs = giskard_core::ASinSpecPtr(new giskard_core::ASinSpec()); 
+      rhs->set_value(node["asin"].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
+  inline bool is_acos(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["acos"];
+  }
+
+  template<>
+  struct convert<giskard_core::ACosSpecPtr>
+  {
+    static Node encode(const giskard_core::ACosSpecPtr& rhs) 
+    {
+      Node node;
+      node["acos"] = rhs->get_value();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::ACosSpecPtr& rhs) 
+    {
+      if(!is_acos(node))
+        return false;
+
+      rhs = giskard_core::ACosSpecPtr(new giskard_core::ACosSpec()); 
+      rhs->set_value(node["acos"].as< giskard_core::DoubleSpecPtr >());
+
+      return true;
+    }
+  };
+
+  inline bool is_atan(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["atan"];
+  }
+
+  template<>
+  struct convert<giskard_core::ATanSpecPtr>
+  {
+    static Node encode(const giskard_core::ATanSpecPtr& rhs) 
+    {
+      Node node;
+      node["atan"] = rhs->get_value();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::ATanSpecPtr& rhs) 
+    {
+      if(!is_atan(node))
+        return false;
+
+      rhs = giskard_core::ATanSpecPtr(new giskard_core::ATanSpec()); 
+      rhs->set_value(node["atan"].as< giskard_core::DoubleSpecPtr >());
 
       return true;
     }
@@ -642,6 +834,12 @@ namespace YAML {
             boost::dynamic_pointer_cast<giskard_core::MinSpec>(rhs);
         node = p;
       }
+      else if(boost::dynamic_pointer_cast<giskard_core::MaxSpec>(rhs).get())
+      {
+        giskard_core::MaxSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::MaxSpec>(rhs);
+        node = p;
+      }
       else if(boost::dynamic_pointer_cast<giskard_core::AbsSpec>(rhs).get())
       {
         giskard_core::AbsSpecPtr p = 
@@ -658,6 +856,42 @@ namespace YAML {
       {
         giskard_core::DoubleIfSpecPtr p = 
             boost::dynamic_pointer_cast<giskard_core::DoubleIfSpec>(rhs);
+        node = p;
+      }
+      else if(boost::dynamic_pointer_cast<giskard_core::SinSpec>(rhs).get())
+      {
+        giskard_core::SinSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::SinSpec>(rhs);
+        node = p;
+      }
+      else if(boost::dynamic_pointer_cast<giskard_core::CosSpec>(rhs).get())
+      {
+        giskard_core::CosSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::CosSpec>(rhs);
+        node = p;
+      }
+      else if(boost::dynamic_pointer_cast<giskard_core::TanSpec>(rhs).get())
+      {
+        giskard_core::TanSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::TanSpec>(rhs);
+        node = p;
+      }
+      else if(boost::dynamic_pointer_cast<giskard_core::ASinSpec>(rhs).get())
+      {
+        giskard_core::ASinSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::ASinSpec>(rhs);
+        node = p;
+      }
+      else if(boost::dynamic_pointer_cast<giskard_core::ACosSpec>(rhs).get())
+      {
+        giskard_core::ACosSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::ACosSpec>(rhs);
+        node = p;
+      }
+      else if(boost::dynamic_pointer_cast<giskard_core::ATanSpec>(rhs).get())
+      {
+        giskard_core::ATanSpecPtr p = 
+        boost::dynamic_pointer_cast<giskard_core::ATanSpec>(rhs);
         node = p;
       }
 
@@ -737,6 +971,11 @@ namespace YAML {
         rhs = node.as<giskard_core::MinSpecPtr>();
         return true;
       }
+      else if(is_max(node))
+      {
+        rhs = node.as<giskard_core::MaxSpecPtr>();
+        return true;
+      }
       else if(is_abs(node))
       {
         rhs = node.as<giskard_core::AbsSpecPtr>();
@@ -752,8 +991,40 @@ namespace YAML {
         rhs = node.as<giskard_core::DoubleIfSpecPtr>();
         return true;
       }
-      else
+      else if(is_sin(node))
+      {
+        rhs = node.as<giskard_core::SinSpecPtr>();
+        return true;
+      }
+      else if(is_cos(node))
+      {
+        rhs = node.as<giskard_core::CosSpecPtr>();
+        return true;
+      }
+      else if(is_tan(node))
+      {
+        rhs = node.as<giskard_core::TanSpecPtr>();
+        return true;
+      }
+      else if(is_asin(node))
+      {
+        rhs = node.as<giskard_core::ASinSpecPtr>();
+        return true;
+      }
+      else if(is_acos(node))
+      {
+        rhs = node.as<giskard_core::ACosSpecPtr>();
+        return true;
+      }
+      else if(is_atan(node))
+      {
+        rhs = node.as<giskard_core::ATanSpecPtr>();
+        return true;
+      }
+      else {
+        std::cout << "Unparsable node: " << node << std::endl; 
         return false;
+      }
     }
   };
  
@@ -1097,6 +1368,37 @@ namespace YAML {
     }
   };
 
+  inline bool is_vector_cross(const Node& node)
+  {
+    return node.IsMap() && (node.size() == 1) && node["vector-cross"] &&
+    node["vector-cross"].IsSequence() && (node["vector-cross"].size() == 2);
+  }
+
+  template<>
+  struct convert<giskard_core::VectorCrossSpecPtr>
+  {
+    static Node encode(const giskard_core::VectorCrossSpecPtr& rhs) 
+    {
+      Node node;
+      node["vector-cross"][0] = rhs->get_lhs();
+      node["vector-cross"][1] = rhs->get_rhs();
+      return node;
+    }
+
+    static bool decode(const Node& node, giskard_core::VectorCrossSpecPtr& rhs) 
+    {
+      if(!is_vector_cross(node))
+        return false;
+
+      rhs = giskard_core::VectorCrossSpecPtr(new giskard_core::VectorCrossSpec()); 
+      rhs->set_lhs(node["vector-cross"][0].as< giskard_core::VectorSpecPtr >());
+      rhs->set_rhs(node["vector-cross"][1].as< giskard_core::VectorSpecPtr >());
+
+      return true;
+    }
+  };
+
+
   template<>
   struct convert<giskard_core::VectorSpecPtr> 
   {
@@ -1126,6 +1428,8 @@ namespace YAML {
         node = boost::dynamic_pointer_cast<giskard_core::VectorDoubleMultiplicationSpec>(rhs);
       else if(boost::dynamic_pointer_cast<giskard_core::VectorRotationVectorSpec>(rhs).get())
         node = boost::dynamic_pointer_cast<giskard_core::VectorRotationVectorSpec>(rhs);
+      else if(boost::dynamic_pointer_cast<giskard_core::VectorCrossSpec>(rhs).get())
+        node = boost::dynamic_pointer_cast<giskard_core::VectorCrossSpec>(rhs);
 
       return node;
     }
@@ -1187,8 +1491,15 @@ namespace YAML {
         rhs = node.as<giskard_core::VectorRotationVectorSpecPtr>();
         return true;
       }
-      else
+      else if(is_vector_cross(node))
+      {
+        rhs = node.as<giskard_core::VectorCrossSpecPtr>();
+        return true;
+      }
+      else {
+        std::cout << "Unparsable node: " << node << std::endl; 
         return false;
+      }
     }
   };
 
@@ -1520,8 +1831,10 @@ namespace YAML {
         rhs = node.as<giskard_core::RotationMultiplicationSpecPtr>();
         return true;
       }
-      else
+      else {
+        std::cout << "Unparsable node: " << node << std::endl; 
         return false;
+      }
     }
   }; 
 
@@ -1773,8 +2086,10 @@ namespace YAML {
         rhs = node.as<giskard_core::InverseFrameSpecPtr>();
         return true;
       }
-      else
+      else {
+        std::cout << "Unparsable node: " << node << std::endl; 
         return false;
+      }
     }
   };
 

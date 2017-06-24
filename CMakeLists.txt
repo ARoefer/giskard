@@ -5,6 +5,8 @@ add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED COMPONENTS expressiongraph qpoases kdl_parser)
 
+add_definitions(-std=c++11 -g)
+
 # setting additional cmake flags, used for integration with Coveralls.io
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MY_CMAKE_CXX_FLAGS}")
 
