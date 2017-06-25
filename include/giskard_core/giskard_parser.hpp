@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
-#include "giskard/specifications.hpp"
+#include "giskard_core/specifications.hpp"
 
 using namespace std;
 
@@ -12,6 +12,8 @@ class StringSpec : public Spec {
 public:
 	StringSpec(const string& val)
 	: value(val) {}
+
+	void get_input_specs(std::vector<const InputSpec*>& inputs) const {}
 
 	virtual bool equals(const Spec& other) const {
 		if (!dynamic_cast<const StringSpec*>(&other))
@@ -942,7 +944,7 @@ private:
 				temp->lower_ = dynamic_pointer_cast<DoubleSpec>(specs[0]);
 				temp->upper_ = dynamic_pointer_cast<DoubleSpec>(specs[1]);
 				temp->weight_ = dynamic_pointer_cast<DoubleSpec>(specs[2]);
-				temp->input = dynamic_pointer_cast<StringSpec>(specs[3])->get_value();
+				temp->input_ = dynamic_pointer_cast<StringSpec>(specs[3])->get_value();
 				spec = temp;
 				return CTRLC;
 			} 
