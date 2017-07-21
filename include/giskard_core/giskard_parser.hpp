@@ -8,33 +8,6 @@ using namespace std;
 
 namespace giskard_core {
 
-class StringSpec : public Spec {
-public:
-	StringSpec(const string& val)
-	: value(val) {}
-
-	void get_input_specs(std::vector<const InputSpec*>& inputs) const {}
-
-	virtual bool equals(const Spec& other) const {
-		if (!dynamic_cast<const StringSpec*>(&other))
-			return false;
-
-		return value.compare(dynamic_cast<const StringSpec*>(&other)->get_value()) == 0;
-	}
-
-	void set_value(const string& val) {
-		value = val;
-	}
-
-	string get_value() const {
-		return value;
-	}
-private:
-	string value;
-};
-
-typedef boost::shared_ptr<StringSpec> StringSpecPtr;
-
 class GiskardLangParser {
 public:
 	struct EOSException : std::exception {
@@ -598,7 +571,7 @@ private:
 			if (c != '"')
 				throwParseError(current, end, "Unexpected char. Expected '\"' got: "+c);
 
-			spec = StringSpecPtr(new StringSpec(string(start, current)));
+			spec = const_string_spec(string(start, current));
 			current++;
 
 			t = parseAttributeAccess(spec, current, end, STRING);
@@ -808,7 +781,7 @@ private:
 		} else if (name.compare("inputScalar") == 0) {
 			parseNTuple(specs, types, current, end);
 			if (types.size() == 1 && types[0] == STRING) {
-				spec = DoubleInputSpecPtr(new DoubleInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])->get_value()));
+				spec = DoubleInputSpecPtr(new DoubleInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])));
 				return DOUBLE;
 			} 
 			cerr << "No overload for " << name << " that takes: ";
@@ -820,7 +793,7 @@ private:
 		} else if (name.compare("inputJoint") == 0) {
 			parseNTuple(specs, types, current, end);
 			if (types.size() == 1 && types[0] == STRING) {
-				spec = JointInputSpecPtr(new JointInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])->get_value()));
+				spec = JointInputSpecPtr(new JointInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])));
 				return DOUBLE;
 			} 
 			cerr << "No overload for " << name << " that takes: ";
@@ -832,7 +805,7 @@ private:
 		} else if (name.compare("inputVec3") == 0) {
 			parseNTuple(specs, types, current, end);
 			if (types.size() == 1 && types[0] == STRING) {
-				spec = VectorInputSpecPtr(new VectorInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])->get_value()));
+				spec = VectorInputSpecPtr(new VectorInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])));
 				return VECTOR;
 			} 
 			cerr << "No overload for " << name << " that takes: ";
@@ -844,7 +817,7 @@ private:
 		} else if (name.compare("inputRot") == 0) {
 			parseNTuple(specs, types, current, end);
 			if (types.size() == 1 && types[0] == STRING) {
-				spec = RotationInputSpecPtr(new RotationInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])->get_value()));
+				spec = RotationInputSpecPtr(new RotationInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])));
 				return ROTATION;
 			} 
 			cerr << "No overload for " << name << " that takes: ";
@@ -856,7 +829,7 @@ private:
 		} else if (name.compare("inputFrame") == 0) {
 			parseNTuple(specs, types, current, end);
 			if (types.size() == 1 && types[0] == STRING) {
-				spec = FrameInputSpecPtr(new FrameInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])->get_value()));
+				spec = FrameInputSpecPtr(new FrameInputSpec(dynamic_pointer_cast<StringSpec>(specs[0])));
 				return FRAME;
 			} 
 			cerr << "No overload for " << name << " that takes: ";
@@ -944,7 +917,7 @@ private:
 				temp->lower_ = dynamic_pointer_cast<DoubleSpec>(specs[0]);
 				temp->upper_ = dynamic_pointer_cast<DoubleSpec>(specs[1]);
 				temp->weight_ = dynamic_pointer_cast<DoubleSpec>(specs[2]);
-				temp->input_ = dynamic_pointer_cast<StringSpec>(specs[3])->get_value();
+				temp->input_ = dynamic_pointer_cast<StringSpec>(specs[3]);
 				spec = temp;
 				return CTRLC;
 			} 
@@ -978,7 +951,7 @@ private:
 				temp->upper_ = dynamic_pointer_cast<DoubleSpec>(specs[1]);
 				temp->weight_ = dynamic_pointer_cast<DoubleSpec>(specs[2]);
 				temp->expression_ = dynamic_pointer_cast<DoubleSpec>(specs[3]);
-				temp->name_ = dynamic_pointer_cast<StringSpec>(specs[4])->get_value();
+				temp->name_ = dynamic_pointer_cast<StringSpec>(specs[4]);
 				spec = temp;
 				return SOFTC;
 			} 
