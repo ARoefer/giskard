@@ -26,6 +26,32 @@
 #include <giskard_core/specifications.hpp>
 
 namespace YAML {
+  //
+  // parsing of string specs
+  //
+
+  template<>
+  struct convert<giskard_core::StringSpecPtr> 
+  {
+    static Node encode(const giskard_core::StringSpecPtr& rhs) 
+    {
+      YAML::Node node;
+      node = rhs->get_value();
+
+      return node;
+    }
+  
+    static bool decode(const Node& node, giskard_core::StringSpecPtr& rhs) 
+    {
+      try
+      {
+        rhs = giskard_core::const_string_spec(node.as<std::string>());
+        return true;
+      } catch (const YAML::Exception& e) { 
+        return false;
+      }
+    }
+  };
 
   // 
   // parsing of double specs
@@ -2239,7 +2265,7 @@ namespace YAML {
       rhs.lower_ = node["controllable-constraint"][0].as<giskard_core::DoubleSpecPtr>();
       rhs.upper_ = node["controllable-constraint"][1].as<giskard_core::DoubleSpecPtr>();
       rhs.weight_ = node["controllable-constraint"][2].as<giskard_core::DoubleSpecPtr>();
-      rhs.input_ = node["controllable-constraint"][3].as<std::string>();
+      rhs.input_ = node["controllable-constraint"][3].as<giskard_core::StringSpecPtr>();
 
       return true;
     }
@@ -2276,7 +2302,7 @@ namespace YAML {
       rhs.upper_ = node["soft-constraint"][1].as<giskard_core::DoubleSpecPtr>();
       rhs.weight_ = node["soft-constraint"][2].as<giskard_core::DoubleSpecPtr>();
       rhs.expression_ = node["soft-constraint"][3].as<giskard_core::DoubleSpecPtr>();
-      rhs.name_ = node["soft-constraint"][4].as<std::string>();
+      rhs.name_ = node["soft-constraint"][4].as<giskard_core::StringSpecPtr>();
 
       return true;
     }

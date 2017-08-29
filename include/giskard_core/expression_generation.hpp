@@ -41,8 +41,8 @@ namespace giskard_core
     for(size_t i = 0; i < controllables.size(); i++) {
       bool found = false;
       for (size_t n = 0; n < temp.size(); n++) {
-        if (controllables[i] == temp[n]->get_name() && temp[n]->get_type() == giskard_core::tJoint) {
-          scope.add_joint_input(temp[n]->get_name());
+        if (controllables[i] == temp[n]->get_name()->get_value() && temp[n]->get_type() == giskard_core::tJoint) {
+          scope.add_joint_input(temp[n]->get_name()->get_value());
           found = true;
           break;
         }
@@ -54,19 +54,19 @@ namespace giskard_core
     for (size_t i = 0; i < temp.size(); i++) {
       switch (temp[i]->get_type()) {
         case giskard_core::tScalar:
-          scope.add_scalar_input(temp[i]->get_name());
+          scope.add_scalar_input(temp[i]->get_name()->get_value());
           break;
         case giskard_core::tJoint:
-          scope.add_joint_input(temp[i]->get_name());
+          scope.add_joint_input(temp[i]->get_name()->get_value());
           break;
         case giskard_core::tVector3:
-          scope.add_vector_input(temp[i]->get_name());
+          scope.add_vector_input(temp[i]->get_name()->get_value());
           break;
         case giskard_core::tRotation:
-          scope.add_rotation_input(temp[i]->get_name());
+          scope.add_rotation_input(temp[i]->get_name()->get_value());
           break;
         case giskard_core::tFrame:
-          scope.add_frame_input(temp[i]->get_name());
+          scope.add_frame_input(temp[i]->get_name()->get_value());
           break;
         default:
           throw std::domain_error("Scope generation: found input of non-supported type.");
@@ -122,7 +122,7 @@ namespace giskard_core
   {
     std::vector<std::string> controllable_name;
     for(size_t i=0; i<spec.controllable_constraints_.size(); ++i) {
-      controllable_name.push_back(spec.controllable_constraints_[i].input_);
+      controllable_name.push_back(spec.controllable_constraints_[i].input_->get_value());
     }
 
     giskard_core::Scope scope = generate(spec.scope_, controllable_name);
@@ -146,7 +146,7 @@ namespace giskard_core
       soft_upper.push_back(spec.soft_constraints_[i].upper_->get_expression(scope));
       soft_weight.push_back(spec.soft_constraints_[i].weight_->get_expression(scope));
       soft_exp.push_back(spec.soft_constraints_[i].expression_->get_expression(scope));
-      soft_name.push_back(spec.soft_constraints_[i].name_);
+      soft_name.push_back(spec.soft_constraints_[i].name_->get_value());
     }
 
     // generate hard constraints
