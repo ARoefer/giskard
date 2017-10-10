@@ -1,18 +1,18 @@
 /*
  * Copyright (C) 2015-2017 Georg Bartels <georg.bartels@cs.uni-bremen.de>
- * 
+ *
  * This file is part of giskard.
- * 
+ *
  * giskard is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -33,7 +33,7 @@ namespace giskard_core
     public:
       typedef typename std::vector< KDL::Expression<double>::Ptr > DoubleExpressionVector;
       typedef typename std::vector< std::string> StringVector;
-      
+
       bool init(const DoubleExpressionVector& controllable_lower_bounds,
           const DoubleExpressionVector& controllable_upper_bounds, const DoubleExpressionVector& controllable_weights,
           const StringVector& controllable_names, const DoubleExpressionVector& soft_expressions,
@@ -55,7 +55,7 @@ namespace giskard_core
         //       corresponding test-case is broken flying cup. Switching to
         //       "default" solved this on qpOASES 3.1.
         // NOTE: Even earlier, I was using setting "MPC" that left to weird behavior
-        //       for orientation control. It seemed as if the solver returned 
+        //       for orientation control. It seemed as if the solver returned
         //       inaccurate solutions. We (Alexis and Georg) decided to swith
         //       away from "MPC" to improve this behavior. That was also for
         //       qpOASES 3.1. However, now I cannot reproduce that problem.
@@ -70,14 +70,14 @@ namespace giskard_core
         xdot_slack_.resize(qp_builder_.num_soft_constraints());
 
         if( controllable_names.size() != qp_builder_.num_controllables() )
-          throw std::runtime_error("Received " + boost::lexical_cast<std::string>(controllable_names_.size()) + 
-              " controllable names, but " + boost::lexical_cast<std::string>(qp_builder_.num_controllables()) + 
+          throw std::runtime_error("Received " + boost::lexical_cast<std::string>(controllable_names_.size()) +
+              " controllable names, but " + boost::lexical_cast<std::string>(qp_builder_.num_controllables()) +
               " controllables were specified.");
         controllable_names_ = controllable_names;
 
         if( soft_names.size() != qp_builder_.num_soft_constraints() )
-          throw std::runtime_error("Received " + boost::lexical_cast<std::string>(soft_names.size()) + 
-              " soft constraint names, but " + boost::lexical_cast<std::string>(qp_builder_.num_soft_constraints()) + 
+          throw std::runtime_error("Received " + boost::lexical_cast<std::string>(soft_names.size()) +
+              " soft constraint names, but " + boost::lexical_cast<std::string>(qp_builder_.num_soft_constraints()) +
               " soft constraints were specified.");
         soft_constraint_names_ = soft_names;
 
@@ -88,29 +88,29 @@ namespace giskard_core
       {
         qp_builder_.update(observables);
 
-        qpOASES::returnValue return_value = qp_problem_.init(qp_builder_.get_H().data(), qp_builder_.get_g().data(), 
+        qpOASES::returnValue return_value = qp_problem_.init(qp_builder_.get_H().data(), qp_builder_.get_g().data(),
             qp_builder_.get_A().data(), qp_builder_.get_lb().data(), qp_builder_.get_ub().data(),
             qp_builder_.get_lbA().data(), qp_builder_.get_ubA().data(), nWSR);
 
         if(return_value != qpOASES::SUCCESSFUL_RETURN)
         {
-          std::cout << "Init of QP-Problem returned without success! ERROR MESSAGE: " << 
+          std::cout << "Init of QP-Problem returned without success! ERROR MESSAGE: " <<
             qpOASES::MessageHandling::getErrorCodeMessage(return_value) << std::endl;
           std::cout << "Printing internals." << std::endl;
           qp_builder_.print_internals();
           std::cout << "nWSR: " << nWSR << std::endl;
           qp_builder_.are_internals_valid();
         }
-        
+
         return return_value == qpOASES::SUCCESSFUL_RETURN;
       }
-      
- 
+
+
       bool update(const Eigen::VectorXd& observables, int nWSR)
       {
        qp_builder_.update(observables);
 
-       if( qp_problem_.hotstart(qp_builder_.get_H().data(), qp_builder_.get_g().data(), 
+       if( qp_problem_.hotstart(qp_builder_.get_H().data(), qp_builder_.get_g().data(),
            qp_builder_.get_A().data(), qp_builder_.get_lb().data(), qp_builder_.get_ub().data(),
            qp_builder_.get_lbA().data(), qp_builder_.get_ubA().data(), nWSR)
            != qpOASES::SUCCESSFUL_RETURN )
@@ -181,7 +181,7 @@ namespace giskard_core
           throw std::domain_error("QP-Controller: There are unequal amounts of controllables and commands! This is severly wrong and should never happen!");
         for (size_t i = 0; i < controllable_names_.size(); i++)
           out[controllable_names_[i]] = xdot_control_[i];
-        
+
         return out;
       }
 
@@ -193,33 +193,33 @@ namespace giskard_core
               inputVector[ptr->idx_] = value;
               return;
             }
-            throw std::invalid_argument("Can't set scalar or joint input with name '" + name + 
-                  "' because the input vector is too small. Needed size: " + 
+            throw std::invalid_argument("Can't set scalar or joint input with name '" + name +
+                  "' because the input vector is too small. Needed size: " +
                   std::to_string(ptr->idx_ + 1) + " Actual size: " + std::to_string(inputVector.size()));
         }
         throw std::invalid_argument("Can't set scalar or joint input with name '" + name + "' as it does not exist.");
       }
 
       // Set vector input using Eigen::Vector3d
-      void set_input(Eigen::VectorXd& inputVector, const std::string& name, Eigen::Vector3d value) const {        
+      void set_input(Eigen::VectorXd& inputVector, const std::string& name, Eigen::Vector3d value) const {
             set_input(inputVector, name, value[0], value[1], value[2]);
       }
 
       // Set vector input using KDL::Vector
-      void set_input(Eigen::VectorXd& inputVector, const std::string& name, KDL::Vector value) const {        
+      void set_input(Eigen::VectorXd& inputVector, const std::string& name, KDL::Vector value) const {
             set_input(inputVector, name, value[0], value[1], value[2]);
       }
 
       void set_input(Eigen::VectorXd& inputVector, const std::string& name, double x, double y, double z) const {
         giskard_core::Scope::Vec3InputPtr ptr = scope_.find_input<giskard_core::Scope::Vec3Input>(name);
-          if(ptr->idx_ + 2 < inputVector.size()) {         
+          if(ptr->idx_ + 2 < inputVector.size()) {
             inputVector[ptr->idx_] = x;
             inputVector[ptr->idx_ + 1] = y;
             inputVector[ptr->idx_ + 2] = z;
             return;
          }
-         throw std::invalid_argument("Can't set vec3 input with name '" + name + 
-                  "' because the input vector is too small. Needed size: " + 
+         throw std::invalid_argument("Can't set vec3 input with name '" + name +
+                  "' because the input vector is too small. Needed size: " +
                   std::to_string(ptr->idx_ + 3) + " Actual size: " + std::to_string(inputVector.size()));
       }
 
@@ -253,13 +253,13 @@ namespace giskard_core
 
           return;
         }
-        throw std::invalid_argument("Can't set rotation input with name '" + name + 
-                "' because the input vector is too small. Needed size: " + 
+        throw std::invalid_argument("Can't set rotation input with name '" + name +
+                "' because the input vector is too small. Needed size: " +
                 std::to_string(ptr->idx_ + 4) + " Actual size: " + std::to_string(inputVector.size()));
       }
 
       // Set frame input using a KDL::Frame
-      void set_input(Eigen::VectorXd& inputVector, const std::string& name, KDL::Frame value) const {  
+      void set_input(Eigen::VectorXd& inputVector, const std::string& name, KDL::Frame value) const {
         KDL::Vector translation = value.p;
         KDL::Rotation rotation  = value.M;
         KDL::Vector axis;
@@ -275,7 +275,7 @@ namespace giskard_core
       }
 
       // Set frame input using an Eigen::Affine3d
-      void set_input(Eigen::VectorXd& inputVector, const std::string& name, Eigen::Affine3d value) const {  
+      void set_input(Eigen::VectorXd& inputVector, const std::string& name, Eigen::Affine3d value) const {
         Eigen::AngleAxisd aa(value.rotation());
         Eigen::Vector3d axis = aa.axis();
         Eigen::Vector3d translation = value.translation();
@@ -308,8 +308,8 @@ namespace giskard_core
           inputVector[ptr->idx_ + 6] = z;
           return;
         }
-        throw std::invalid_argument("Can't set frame input with name '" + name + 
-                "' because the input vector is too small. Needed size: " + 
+        throw std::invalid_argument("Can't set frame input with name '" + name +
+                "' because the input vector is too small. Needed size: " +
                 std::to_string(ptr->idx_ + 7) + " Actual size: " + std::to_string(inputVector.size()));
       }
 
@@ -371,7 +371,7 @@ namespace giskard_core
       qpOASES::SQProblem qp_problem_;
       Eigen::VectorXd xdot_full_, xdot_control_, xdot_slack_;
       std::vector<std::string> controllable_names_, soft_constraint_names_;
-      giskard_core::Scope scope_;
+      std::map<std::string, InputPtr> inputs_;
   };
 
 }

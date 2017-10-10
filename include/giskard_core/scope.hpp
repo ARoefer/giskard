@@ -1,18 +1,18 @@
 /*
  * Copyright (C) 2015-2017 Georg Bartels <georg.bartels@cs.uni-bremen.de>
- * 
+ *
  * This file is part of giskard.
- * 
+ *
  * giskard is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -47,16 +47,16 @@ namespace giskard_core
       };
 
       struct JointInput : public AInput {
-        JointInput(std::string name, size_t idx, KDL::Expression<double>::Ptr expr) 
+        JointInput(std::string name, size_t idx, KDL::Expression<double>::Ptr expr)
           : AInput(name, idx), expr_(expr) {}
-        
+
         static std::string type_string() { return "joint"; }
         InputType get_type() const { return tJoint; };
         const KDL::Expression<double>::Ptr expr_;
       };
 
       struct ScalarInput : public AInput {
-        ScalarInput(std::string name, size_t idx, KDL::Expression<double>::Ptr expr) 
+        ScalarInput(std::string name, size_t idx, KDL::Expression<double>::Ptr expr)
           : AInput(name, idx), expr_(expr) {}
 
         static std::string type_string() { return "scalar"; }
@@ -65,32 +65,32 @@ namespace giskard_core
       };
 
       struct Vec3Input : public AInput {
-        Vec3Input(std::string name, size_t idx, KDL::Expression<KDL::Vector>::Ptr expr) 
+        Vec3Input(std::string name, size_t idx, KDL::Expression<KDL::Vector>::Ptr expr)
           : AInput(name, idx), expr_(expr) {}
-        
+
         static std::string type_string() { return "vec3"; }
         InputType get_type() const { return tVector3; };
         const KDL::Expression<KDL::Vector>::Ptr expr_;
       };
 
       struct RotationInput : public AInput {
-        RotationInput(std::string name, size_t idx, KDL::Expression<KDL::Rotation>::Ptr expr) 
+        RotationInput(std::string name, size_t idx, KDL::Expression<KDL::Rotation>::Ptr expr)
           : AInput(name, idx), expr_(expr) {}
-        
+
         static std::string type_string() { return "rotation"; }
         InputType get_type() const { return tRotation; };
         const KDL::Expression<KDL::Rotation>::Ptr expr_;
       };
 
       struct FrameInput : public AInput {
-        FrameInput(std::string name, size_t idx, KDL::Expression<KDL::Frame>::Ptr expr) 
+        FrameInput(std::string name, size_t idx, KDL::Expression<KDL::Frame>::Ptr expr)
           : AInput(name, idx), expr_(expr) {}
-        
+
         static std::string type_string() { return "frame"; }
         InputType get_type() const { return tFrame; };
         const KDL::Expression<KDL::Frame>::Ptr expr_;
       };
-      
+
       typedef typename boost::shared_ptr<AInput> InputPtr;
       typedef typename boost::shared_ptr<const AInput> ConstInputPtr;
       typedef typename boost::shared_ptr<JointInput> JointInputPtr;
@@ -99,7 +99,7 @@ namespace giskard_core
       typedef typename boost::shared_ptr<RotationInput> RotationInputPtr;
       typedef typename boost::shared_ptr<FrameInput> FrameInputPtr;
 
-      Scope() 
+      Scope()
       : bJointvectorCompleted(false)
       , nextInputIndex(0) {}
 
@@ -199,7 +199,7 @@ namespace giskard_core
       bool has_expression (const std::string& expression_name) const
       {
         return has_double_expression(expression_name) ||
-          has_vector_expression(expression_name) || 
+          has_vector_expression(expression_name) ||
           has_rotation_expression(expression_name) ||
           has_frame_expression(expression_name);
       }
@@ -277,8 +277,8 @@ namespace giskard_core
             throw std::invalid_argument("Can't add vector input with name '" + name + "'. The name is already taken.");
         } else {
           bJointvectorCompleted = true;
-          KDL::Expression<KDL::Vector>::Ptr expr = KDL::vector(KDL::input(nextInputIndex), 
-                                                         KDL::input(nextInputIndex + 1), 
+          KDL::Expression<KDL::Vector>::Ptr expr = KDL::vector(KDL::input(nextInputIndex),
+                                                         KDL::input(nextInputIndex + 1),
                                                          KDL::input(nextInputIndex + 2));
           inputs_[name] = Vec3InputPtr(new Vec3Input(name, nextInputIndex, expr));
           nextInputIndex += 3;
@@ -292,8 +292,8 @@ namespace giskard_core
             throw std::invalid_argument("Can't add rotation input with name '" + name + "'. The name is already taken.");
         } else {
           bJointvectorCompleted = true;
-          KDL::Expression<KDL::Rotation>::Ptr expr = KDL::rotVec(KDL::vector(KDL::input(nextInputIndex), 
-                                                                     KDL::input(nextInputIndex + 1), 
+          KDL::Expression<KDL::Rotation>::Ptr expr = KDL::rotVec(KDL::vector(KDL::input(nextInputIndex),
+                                                                     KDL::input(nextInputIndex + 1),
                                                                      KDL::input(nextInputIndex + 2)),
                                                          KDL::input(nextInputIndex + 3));
           inputs_[name] = RotationInputPtr(new RotationInput(name, nextInputIndex, expr));
@@ -308,8 +308,8 @@ namespace giskard_core
             throw std::invalid_argument("Can't add frame input with name '" + name + "'. The name is already taken.");
         } else {
           bJointvectorCompleted = true;
-          KDL::Expression<KDL::Frame>::Ptr expr = KDL::frame(KDL::rotVec(KDL::vector(KDL::input(nextInputIndex), 
-                                                                                    KDL::input(nextInputIndex + 1), 
+          KDL::Expression<KDL::Frame>::Ptr expr = KDL::frame(KDL::rotVec(KDL::vector(KDL::input(nextInputIndex),
+                                                                                    KDL::input(nextInputIndex + 1),
                                                                                     KDL::input(nextInputIndex + 2)),
                                                                         KDL::input(nextInputIndex + 3)),
                                                             KDL::vector(KDL::input(nextInputIndex + 4),
